@@ -29,8 +29,6 @@ void main()
 		c[j] = j;
 	}
 
-	
-
 	a[:] = ef_add(b[:], c[:]);
 
 	printf("taken %fs\n", (double)(clock() - start) / CLOCKS_PER_SEC);
