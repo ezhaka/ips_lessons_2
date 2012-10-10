@@ -7,78 +7,44 @@
 
 using namespace std;
 
-#define ITER 1000000000
+#define ITER 3000
 
 int activeThreads = 0;
 CRITICAL_SECTION cs;
 
 void iAlu()
 {
-	_asm
+	for (int i = 0; i < ITER; i++)
 	{
-		mov eax, 0x16
-		add eax, eax
-		add eax, eax
-		add eax, eax
-		add eax, eax
-		add eax, eax
-		add eax, eax
-		add eax, eax
-		add eax, eax
-		add eax, eax
-		add eax, eax
-		add eax, eax
-		add eax, eax
-		add eax, eax
-		add eax, eax
-		add eax, eax
-		add eax, eax
-		/*add ebx, ebx
-		add edx, edx
-		add esi, esi
-		add edi, edi*/
+		_asm
+		{
+			add eax, eax
+			add ebx, ebx
+			add ecx, ecx
+			add edx, edx
+		}
 	}
 }
 
 void iFpu()
 {
-	_asm
+	for (int i = 0; i < ITER; i++)
 	{
-		fadd st(0), st(2)
-		fxch st(1)
-		fadd st(0), st(3)
-		fxch st(1)
+		_asm
+		{
+			fadd st(0), st(2)
+			fxch st(1)
+			fadd st(0), st(3)
+			fxch st(1)
+		}
 	}
 }
   
 void Thread1( void* pParams )
 { 
-	int x = 1;
-
 	for (int i = 0; i < ITER; i++)
 	{
-		x+=100500;
-		x-=100500;
-		//iAlu();
-	}
-
-	EnterCriticalSection( &cs );
-	activeThreads--;
-	LeaveCriticalSection(&cs);
-}
-
-void Thread3 (void* pParams)
-{
-	int x = 1;
-	int y = 2;
-
-	for (int i = 0; i < ITER; i++)
-	{
-		x+=100500;
-		x-=100500;
-		y+=100500;
-		y-=100500;
-		//iAlu();
+		iAlu();
 	}
 
 	EnterCriticalSection( &cs );
@@ -88,12 +54,9 @@ void Thread3 (void* pParams)
 
 void Thread2( void* pParams )
 { 
-	float x = 1.21;
-
 	for (int i = 0; i < ITER; i++)
 	{
-		x+=100500.666;
-		x-=100500.666;
+		iFpu();
 	}
 
 	EnterCriticalSection( &cs );
@@ -125,11 +88,6 @@ void createThreads(int num, ...)
 		{
 			_beginthread(Thread2, 0, NULL);
 		}
-
-		if (arg == 3)
-		{
-			_beginthread(Thread3, 0, NULL);
-		}
 	}
 
 	printf("...\n");
@@ -137,22 +95,31 @@ void createThreads(int num, ...)
   
 	while(activeThreads != 0) {}
 
-	printf("%i threads time taken: %.2fs\n", num, (double)(clock() - tStart)/CLOCKS_PER_SEC);
+	printf("%i threads time taken: %fs\n", num, (double)(clock() - tStart)/CLOCKS_PER_SEC);
 }
-  
+
+//hyper-threading test
+//taken from http://evatutin.narod.ru/evatutin_opt_05_httdepindep.pdf
 int main()
 { 
 	InitializeCriticalSection( &cs );
 
-	//createThreads(1, 1);
+	int experimentsCount = 5;
 
-	createThreads(1, 1);
-	createThreads(1, 3);
-	//createThreads(1, 2);
-	//createThreads(4, 2, 1, 2, 1);
-	//createThreads(4, 1, 1, 1, 1);
-	//createThreads(4, 2, 2, 2, 2);
-	//createThreads(8);
+	for (int i = 0; i < experimentsCount; i++)
+	{
+		createThreads(1, 2); //iFpu threads
+	}
+
+	for (int i = 0; i < experimentsCount; i++)
+	{
+		createThreads(2, 2, 2); //iFpu threads
+	}
+
+	for (int i = 0; i < experimentsCount; i++)
+	{
+		createThreads(4, 2, 2, 2, 2); //iFpu threads
+	}
 
 	getchar();
 
